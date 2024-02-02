@@ -2,9 +2,11 @@ package personal
 
 import (
 	"Yearning-go/src/handler/order/audit"
+	"Yearning-go/src/i18n"
 	"Yearning-go/src/lib"
 	"Yearning-go/src/model"
 	"errors"
+	"github.com/cookieY/yee/logger"
 	"gorm.io/gorm"
 	"log"
 	"time"
@@ -21,10 +23,14 @@ func CallAutoTask(order *model.CoreSqlOrder, length int) {
 	}
 	var isCall bool
 	model.DB().Model(model.CoreDataSource{}).Where("source_id =?", order.SourceId).First(&source)
+	rule, err := lib.CheckDataSourceRule(source.RuleId)
+	if err != nil {
+		logger.DefaultLogger.Error(err)
+	}
 	if client := lib.NewRpc(); client != nil {
 		if err := client.Call("Engine.Exec", &audit.ExecArgs{
 			Order:         order,
-			Rules:         model.GloRole,
+			Rules:         *rule,
 			IP:            source.IP,
 			Port:          source.Port,
 			Username:      source.Username,
@@ -40,7 +46,7 @@ func CallAutoTask(order *model.CoreSqlOrder, length int) {
 			WorkId:   order.WorkId,
 			Username: "AutoTask Robot",
 			Time:     time.Now().Format("2006-01-02 15:04"),
-			Action:   audit.ORDER_EXECUTE_STATE,
+			Action:   i18n.DefaultLang.Load(i18n.ORDER_EXECUTE_STATE),
 		})
 		model.DB().Model(model.CoreSqlOrder{}).Where("work_id =?", order.WorkId).Updates(&model.CoreSqlOrder{CurrentStep: length})
 	}

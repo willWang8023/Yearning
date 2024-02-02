@@ -14,6 +14,7 @@
 package model
 
 import (
+	"Yearning-go/src/i18n"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -39,13 +40,18 @@ type DSN struct {
 	Key      string
 }
 
-func DBNew(c string) {
-	_, err := toml.DecodeFile(c, &C)
+func initConfig(cPath string) {
+	_, err := toml.DecodeFile(cPath, &C)
 	if err != nil {
 		logger.DefaultLogger.Error(err)
 	}
 	JWT = os.Getenv("SECRET_KEY")
+	i18n.MakeBuild(C.General.Lang)
+	DefaultLogger = logger.LogCreator(int(TransferLogLevel()))
+}
 
+func DBNew(c string) {
+	initConfig(c)
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", os.Getenv("MYSQL_USER"), os.Getenv("MYSQL_PASSWORD"), os.Getenv("MYSQL_ADDR"), os.Getenv("MYSQL_DB"))
 	if os.Getenv("MYSQL_USER") == "" {
 		JWT = C.General.SecretKey
@@ -57,7 +63,7 @@ func DBNew(c string) {
 		SkipInitializeWithVersion: false, // 根据当前 MySQL 版本自动配置
 	}), &gorm.Config{})
 	if err != nil {
-		logger.DefaultLogger.Error("mysql连接失败! 请检查配置信息")
+		logger.DefaultLogger.Error(i18n.DefaultLang.Load(i18n.ER_MYSQL_CONNECTION_FAILED))
 		os.Exit(1)
 		return
 	}

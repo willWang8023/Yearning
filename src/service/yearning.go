@@ -14,7 +14,6 @@
 package service
 
 import (
-	"Yearning-go/src/lib"
 	"Yearning-go/src/model"
 	_ "Yearning-go/src/model"
 	"Yearning-go/src/router"
@@ -22,9 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cookieY/yee"
-	"github.com/cookieY/yee/logger"
 	"github.com/cookieY/yee/middleware"
-	"github.com/robfig/cron/v3"
 	"net/http"
 )
 
@@ -34,30 +31,18 @@ var f embed.FS
 //go:embed dist/index.html
 var html string
 
-func cronTabMaskQuery() {
-	crontab := cron.New()
-	if _, err := crontab.AddFunc("* * * * *", func() {
-		var queryOrder []model.CoreQueryOrder
-		model.DB().Model(model.CoreQueryOrder{}).Where("`status` =?", 2).Find(&queryOrder)
-		for _, i := range queryOrder {
-			if lib.TimeDifference(i.ApprovalTime) {
-				model.DB().Model(model.CoreQueryOrder{}).Where("work_id =?", i.WorkId).Updates(&model.CoreQueryOrder{Status: 3})
-			}
-		}
-	}); err != nil {
-		logger.DefaultLogger.Error(err)
-	}
-	crontab.Start()
-}
-
-func StartYearning(port string, host string) {
-	go cronTabMaskQuery()
+func loadDBInit() {
 	model.DB().First(&model.GloPer)
-	model.Host = host
 	_ = json.Unmarshal(model.GloPer.Message, &model.GloMessage)
 	_ = json.Unmarshal(model.GloPer.Ldap, &model.GloLdap)
 	_ = json.Unmarshal(model.GloPer.Other, &model.GloOther)
 	_ = json.Unmarshal(model.GloPer.AuditRole, &model.GloRole)
+}
+
+func StartYearning(port string) {
+	go cronTabMaskQuery()
+	go cronTabTotalTickets()
+	loadDBInit()
 	e := yee.New()
 	e.Pack("/front", f, "dist")
 	e.Use(middleware.Cors())
@@ -67,7 +52,7 @@ func StartYearning(port string, host string) {
 	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
 		Level: 9,
 	}))
-	e.SetLogLevel(2)
+	e.SetLogLevel(model.TransferLogLevel())
 	e.GET("/", func(c yee.Context) error {
 		return c.HTML(http.StatusOK, html)
 	})

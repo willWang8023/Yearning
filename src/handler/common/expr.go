@@ -42,7 +42,7 @@ func AccordingToOrderState() func(db *gorm.DB) *gorm.DB {
 func AccordingToAllOrderState(state int) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		switch state {
-		case 7:
+		case 8:
 			return db
 		default:
 			return db.Where("`status` = ?", state)
@@ -240,5 +240,11 @@ func AccordingToSchemaNotIn(isSchema bool, excludeDbList []string) func(db *gorm
 			return db.Where("SCHEMA_NAME not in (?)", excludeDbList)
 		}
 		return db.Where("table_schema not in (?)", excludeDbList)
+	}
+}
+
+func AccordingToSchemaIn(includeDbList string) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("table_schema = ? ", includeDbList)
 	}
 }

@@ -15,8 +15,17 @@ package model
 
 import (
 	"Yearning-go/src/engine"
+	"github.com/cookieY/yee/logger"
 	"time"
 )
+
+var mappingLevel = map[string]uint8{
+	"critical": 0,
+	"error":    1,
+	"warning":  2,
+	"info":     3,
+	"debug":    4,
+}
 
 type mysql struct {
 	Host     string
@@ -31,6 +40,8 @@ type general struct {
 	Host      string
 	Hours     time.Duration
 	RpcAddr   string
+	LogLevel  string
+	Lang      string
 }
 
 type DbInfo struct {
@@ -64,9 +75,9 @@ type Config struct {
 
 var C Config
 
-var JWT = ""
+var DefaultLogger logger.Logger
 
-var Host = ""
+var JWT = ""
 
 var GloPer CoreGlobalConfiguration
 
@@ -77,3 +88,11 @@ var GloOther Other
 var GloMessage Message
 
 var GloRole engine.AuditRole
+
+func TransferLogLevel() uint8 {
+	v, ok := mappingLevel[C.General.LogLevel]
+	if !ok {
+		return 3
+	}
+	return v
+}
